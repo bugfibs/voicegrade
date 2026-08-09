@@ -3,57 +3,42 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Voice Grade — In-House Engine</title>
+<title>Voice Grade — Native Dictation</title>
 <style>
   :root{
     --bg:#0e1116;--panel:#161b22;--panel-2:#1c232c;--border:#2a323d;
-    --text:#e6edf3;--muted:#8b949e;--accent:#3b82f6;--ok:#22c55e;--warn:#eab308;--bad:#ef4444;--listening:#ef4444;
+    --text:#e6edf3;--muted:#8b949e;--accent:#3b82f6;--ok:#22c55e;--warn:#eab308;--bad:#ef4444;
   }
   *{box-sizing:border-box;}
   html,body{margin:0;padding:0;background:var(--bg);color:var(--text);
     font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,system-ui,sans-serif;min-height:100%;}
-  body{display:grid;grid-template-columns:1fr 1fr;grid-template-rows:auto auto auto 1fr;gap:16px;
+  body{display:grid;grid-template-columns:1fr 1fr;grid-template-rows:auto auto 1fr auto;gap:16px;
     padding:16px;max-width:1400px;margin:0 auto;min-height:100vh;}
   header{grid-column:1/-1;display:flex;align-items:center;justify-content:space-between;gap:16px;
     padding:14px 18px;background:var(--panel);border:1px solid var(--border);border-radius:12px;}
   .title{font-size:18px;font-weight:600;}
   .subtitle{color:var(--muted);font-size:13px;margin-top:2px;}
   .toggle-speak{appearance:none;background:var(--panel-2);color:var(--text);border:1px solid var(--border);
-    padding:8px 14px;border-radius:8px;font-size:13px;cursor:pointer;}
+    padding:8px 14px;border-radius:8px;font-size:13px;cursor:pointer;white-space:nowrap;}
   .toggle-speak.off{color:var(--muted);}
 
-  .inputbar{grid-column:1/-1;display:flex;gap:10px;padding:14px 18px;background:var(--panel);
-    border:1px solid var(--border);border-radius:12px;align-items:center;}
+  .inputwrap{grid-column:1/-1;background:var(--panel);border:1px solid var(--border);border-radius:12px;
+    padding:14px 18px;display:flex;flex-direction:column;gap:10px;}
+  .inputbar{display:flex;gap:10px;align-items:center;}
   .inputbar input{flex:1;appearance:none;background:var(--panel-2);border:1px solid var(--border);border-radius:10px;
-    color:var(--text);font-size:18px;font-family:ui-monospace,Menlo,Consolas,monospace;padding:14px 16px;letter-spacing:.5px;}
+    color:var(--text);font-size:18px;font-family:ui-monospace,Menlo,Consolas,monospace;padding:15px 16px;letter-spacing:.5px;}
   .inputbar input:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px rgba(59,130,246,.2);}
-  .inputbar button{appearance:none;border:none;cursor:pointer;font-size:15px;font-weight:600;border-radius:10px;
-    padding:14px 20px;color:#fff;background:var(--accent);}
-  .inputbar button:hover{background:#2563eb;}
-
-  .voicebar{grid-column:1/-1;background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:16px 18px;
-    display:flex;flex-direction:column;gap:12px;}
-  .voicerow{display:flex;gap:12px;align-items:center;flex-wrap:wrap;}
-  .voicebar select{background:var(--panel-2);color:var(--text);border:1px solid var(--border);border-radius:8px;
-    padding:10px 12px;font-size:13px;}
-  .btn-secondary{appearance:none;background:var(--panel-2);color:var(--text);border:1px solid var(--border);
-    border-radius:8px;padding:10px 16px;font-size:13px;font-weight:600;cursor:pointer;}
-  .btn-secondary:hover{border-color:var(--text);}
-  .btn-secondary:disabled{opacity:.5;cursor:not-allowed;}
-  .ptt{flex:1;min-width:180px;appearance:none;border:none;border-radius:12px;padding:20px;font-size:17px;font-weight:700;
-    cursor:pointer;color:#fff;background:var(--accent);letter-spacing:.3px;user-select:none;-webkit-user-select:none;touch-action:none;}
-  .ptt:disabled{background:var(--panel-2);color:var(--muted);cursor:not-allowed;}
-  .ptt.recording{background:var(--listening);animation:pulse 1.2s infinite;}
-  @keyframes pulse{0%{box-shadow:0 0 0 0 rgba(239,68,68,.55);}70%{box-shadow:0 0 0 16px rgba(239,68,68,0);}100%{box-shadow:0 0 0 0 rgba(239,68,68,0);}}
-  .vstatus{font-size:13px;color:var(--muted);min-height:18px;}
-  .vstatus.ok{color:#86efac;}.vstatus.err{color:#fca5a5;}.vstatus.work{color:#fcd34d;}
-  .heard{font-family:ui-monospace,monospace;font-size:14px;color:#93c5fd;background:rgba(59,130,246,.08);
-    border:1px solid rgba(59,130,246,.22);border-radius:8px;padding:10px 12px;min-height:20px;word-break:break-word;}
-  .heard .lbl{color:var(--muted);font-family:inherit;}
+  .confirm{appearance:none;border:none;cursor:pointer;font-size:15px;font-weight:700;border-radius:10px;
+    padding:15px 22px;color:#fff;background:var(--ok);white-space:nowrap;}
+  .confirm:hover{background:#16a34a;}
+  .confirm:disabled{background:var(--panel-2);color:var(--muted);cursor:not-allowed;}
+  .hint{font-size:12.5px;color:var(--muted);line-height:1.5;}
+  .hint b{color:var(--text);}
 
   .panel{background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:18px;
     display:flex;flex-direction:column;min-height:0;}
   .panel h2{margin:0 0 12px;font-size:12px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--muted);}
+
   .result{background:var(--panel-2);border:1px solid var(--border);border-radius:10px;padding:18px;min-height:120px;
     display:flex;flex-direction:column;gap:8px;}
   .result.flash-ok{animation:flashOk .6s ease;}.result.flash-warn{animation:flashWarn .6s ease;}
@@ -65,12 +50,18 @@
   .result .alias{font-size:13px;font-family:ui-monospace,monospace;color:#93c5fd;background:rgba(59,130,246,.1);
     border:1px solid rgba(59,130,246,.25);border-radius:8px;padding:8px 10px;word-break:break-all;}
   .result.empty .value{color:var(--muted);font-size:16px;font-weight:400;}
+  .rawline{font-family:ui-monospace,monospace;font-size:13px;color:var(--muted);word-break:break-word;}
+  .rawline b{color:#93c5fd;}
+  .corrected{font-family:ui-monospace,monospace;font-size:12.5px;color:#fcd34d;word-break:break-word;}
+  .fixbtn{align-self:flex-start;appearance:none;background:transparent;border:1px solid var(--border);color:var(--muted);
+    border-radius:6px;padding:5px 10px;font-size:11px;cursor:pointer;margin-top:2px;}
+  .fixbtn:hover{color:var(--text);border-color:var(--text);}
 
   .foil-tally{display:flex;gap:12px;margin-bottom:12px;}
   .foil-stat{flex:1;background:var(--panel-2);border:1px solid var(--border);border-radius:10px;padding:14px;}
   .foil-stat .label{font-size:11px;color:var(--muted);letter-spacing:1px;text-transform:uppercase;}
   .foil-stat .num{font-size:26px;font-weight:700;font-family:ui-monospace,monospace;margin-top:4px;}
-  .foil-list{flex:1;overflow-y:auto;max-height:200px;border:1px solid var(--border);border-radius:10px;background:var(--panel-2);}
+  .foil-list{flex:1;overflow-y:auto;max-height:160px;border:1px solid var(--border);border-radius:10px;background:var(--panel-2);}
   .foil-list .row{padding:8px 12px;border-bottom:1px solid var(--border);font-size:13px;font-family:ui-monospace,monospace;
     display:flex;justify-content:space-between;gap:8px;}
   .foil-list .row:last-child{border-bottom:none;}
@@ -93,6 +84,24 @@
   .clear-btn:hover{color:var(--text);border-color:var(--text);}
   .panel-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;}
   .panel-header h2{margin:0;}
+
+  /* Corrections */
+  .corrections{grid-column:1/-1;background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:18px;}
+  .corrections .addrow{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:12px;}
+  .corrections input{background:var(--panel-2);border:1px solid var(--border);border-radius:8px;color:var(--text);
+    font-size:14px;padding:10px 12px;font-family:ui-monospace,monospace;min-width:140px;flex:1;}
+  .corrections input:focus{outline:none;border-color:var(--accent);}
+  .corrections .arrow{color:var(--muted);font-size:18px;}
+  .corrections .addbtn{appearance:none;border:none;background:var(--accent);color:#fff;font-weight:600;font-size:14px;
+    border-radius:8px;padding:10px 18px;cursor:pointer;}
+  .corr-list{display:flex;flex-direction:column;gap:6px;}
+  .corr-item{display:flex;align-items:center;gap:10px;background:var(--panel-2);border:1px solid var(--border);
+    border-radius:8px;padding:8px 12px;font-family:ui-monospace,monospace;font-size:13px;}
+  .corr-item .from{color:#fca5a5;}.corr-item .to{color:#86efac;}.corr-item .arr{color:var(--muted);}
+  .corr-item .del{margin-left:auto;appearance:none;background:transparent;border:none;color:var(--muted);cursor:pointer;font-size:16px;}
+  .corr-item .del:hover{color:var(--bad);}
+  .corr-empty{color:var(--muted);font-size:13px;}
+
   .help{grid-column:1/-1;background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:16px 18px;
     font-size:12px;color:var(--muted);line-height:1.6;}
   .help code{background:var(--panel-2);padding:2px 6px;border-radius:4px;font-size:11px;color:var(--text);}
@@ -103,37 +112,29 @@
 
 <header>
   <div>
-    <div class="title">Voice Grade — In-House Engine</div>
-    <div class="subtitle">One Whisper model runs on-device, same on every phone and laptop. Nothing is sent anywhere.</div>
+    <div class="title">Voice Grade — Native Dictation</div>
+    <div class="subtitle">Uses your device's own voice input. Any phone or computer, no app, no download.</div>
   </div>
   <button id="speakToggle" class="toggle-speak">🔊 Speak: Off</button>
 </header>
 
-<section class="inputbar">
-  <input id="entry" type="text" autocomplete="off" spellcheck="false"
-    placeholder="Type, paste, or use the mic below — e.g.  9109  ·  nissan 45  ·  large foreign" />
-  <button id="parseBtn" title="Parse (or press Enter)">Parse</button>
-</section>
-
-<section class="voicebar">
-  <div class="voicerow">
-    <label for="modelSel" style="font-size:13px;color:var(--muted);">Engine</label>
-    <select id="modelSel">
-      <option value="Xenova/whisper-tiny.en">Whisper tiny.en — best for phones (~75 MB)</option>
-      <option value="Xenova/whisper-base.en">Whisper base.en — more accurate, desktop only (~145 MB)</option>
-    </select>
-    <button id="loadBtn" class="btn-secondary">Enable voice (downloads once)</button>
+<section class="inputwrap">
+  <div class="inputbar">
+    <input id="entry" type="text" autocomplete="off" spellcheck="false" enterkeyhint="done"
+      placeholder="Tap here, then tap 🎤 on your keyboard and speak…" />
+    <button id="confirmBtn" class="confirm" disabled>✓ Confirm</button>
   </div>
-  <button id="pttBtn" class="ptt" disabled>Hold to talk</button>
-  <div id="vstatus" class="vstatus">Voice engine not loaded yet. Enable it above, then hold the button and speak one phrase.</div>
-  <div class="heard"><span class="lbl">Heard (raw): </span><span id="heardRaw">—</span></div>
+  <div class="hint">
+    <b>How to use:</b> tap the box, then tap the <b>🎤 microphone key</b> on your keyboard (or your computer's dictation) and say one phrase.
+    Check the preview, then tap <b>Confirm</b> to log it. Nothing is logged until you confirm — so a mishear is never a wrong entry.
+  </div>
 </section>
 
 <section class="panel">
-  <h2>Parsed Result</h2>
+  <h2>Preview — check before confirming</h2>
   <div id="result" class="result empty">
     <div class="tab">Waiting</div>
-    <div class="value">Speak or type something.</div>
+    <div class="value">Speak or type a phrase.</div>
     <div class="meta">Part numbers treat <strong>O</strong> and <strong>0</strong> as interchangeable.</div>
   </div>
 
@@ -149,8 +150,19 @@
 </section>
 
 <section class="panel">
-  <div class="panel-header"><h2>Parsed Log</h2><button class="clear-btn" id="clearLog">Clear</button></div>
-  <div id="log" class="log"><div class="log-empty">Nothing parsed yet.</div></div>
+  <div class="panel-header"><h2>Confirmed Log</h2><button class="clear-btn" id="clearLog">Clear</button></div>
+  <div id="log" class="log"><div class="log-empty">Nothing confirmed yet.</div></div>
+</section>
+
+<section class="corrections">
+  <div class="panel-header"><h2>Corrections — fix mishears once, applied forever</h2></div>
+  <div class="addrow">
+    <input id="corrFrom" type="text" placeholder="Heard (e.g. for)" />
+    <span class="arrow">→</span>
+    <input id="corrTo" type="text" placeholder="Should be (e.g. four)" />
+    <button id="corrAdd" class="addbtn">Add</button>
+  </div>
+  <div id="corrList" class="corr-list"><div class="corr-empty">No corrections yet. When a device mishears the same way, add it here.</div></div>
 </section>
 
 <div class="help">
@@ -162,12 +174,7 @@
   <code>foil 4 pounds foreign</code> → Foil entry.
 </div>
 
-<script type="module">
-import { pipeline, env } from "https://cdn.jsdelivr.net/npm/@huggingface/transformers@3";
-
-env.allowLocalModels = false;        // fetch from HF CDN, cache in the browser
-env.backends.onnx.wasm.proxy = true; // run inference in a worker so the page can't freeze
-
+<script>
 /* ================= Reference data ================= */
 const BRAND_CODES={"bmw":"BMW","chrysler":"CHR","diesel":"DIE","ford":"FRD","gm":"GEM","general motors":"GEM",
   "honda":"HON","hyundai":"HYU","isuzu":"ISU","jaguar":"JAG","mazda":"MAZ","mercedes":"MER","mercedes benz":"MER",
@@ -185,17 +192,32 @@ const LETTER_SET="abcdefghijklmnopqrstuvwxyz".split("");
 
 /* ================= DOM ================= */
 const $=id=>document.getElementById(id);
-const $entry=$("entry"),$parseBtn=$("parseBtn"),$result=$("result"),$log=$("log"),
+const $entry=$("entry"),$confirmBtn=$("confirmBtn"),$result=$("result"),$log=$("log"),
   $clearLog=$("clearLog"),$clearFoils=$("clearFoils"),$foilForeign=$("foilForeign"),$foilDomestic=$("foilDomestic"),
   $foilEntries=$("foilEntries"),$foilList=$("foilList"),$speakToggle=$("speakToggle"),
-  $modelSel=$("modelSel"),$loadBtn=$("loadBtn"),$pttBtn=$("pttBtn"),$vstatusEl=$("vstatus"),$heardRaw=$("heardRaw");
+  $corrFrom=$("corrFrom"),$corrTo=$("corrTo"),$corrAdd=$("corrAdd"),$corrList=$("corrList");
 
 let speakOn=false;
 const foilEntries=[];
+let lastRaw="";
+
+/* ================= Corrections (persist on device) ================= */
+let corrections=loadCorrections();
+function loadCorrections(){try{const s=localStorage.getItem("vg_corrections");return s?JSON.parse(s):[];}catch(_){return[];}}
+function saveCorrections(){try{localStorage.setItem("vg_corrections",JSON.stringify(corrections));}catch(_){}}
+const escapeRegex=s=>s.replace(/[.*+?^${}()|[\]\\]/g,"\\$&");
+function applyCorrections(text){
+  for(const c of corrections){
+    if(!c.from)continue;
+    try{text=text.replace(new RegExp("\\b"+escapeRegex(c.from)+"\\b","gi"),c.to);}catch(_){}
+  }
+  return text;
+}
 
 /* ================= Parser ================= */
 function normalize(rawText){
   let text=rawText.toLowerCase().trim();
+  text=applyCorrections(text);
   text=text.replace(/\bspace\b/g," __SPACE__ ").replace(/[.,!?;:]/g," ").replace(/\s+/g," ").trim();
   const rawTokens=text.split(" ").filter(Boolean);
   const tokens=[];
@@ -288,12 +310,14 @@ function parsePhrase(rawText){
   return{type:"skip",reason:"didn't match any known pattern"};
 }
 
-/* ================= Rendering ================= */
+/* ================= Helpers ================= */
 const fmtTime=(d=new Date())=>{const p=n=>String(n).padStart(2,"0");return`${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`;};
 const titleCase=s=>s.replace(/\b\w/g,c=>c.toUpperCase());
 const escapeHtml=s=>String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c]));
+function correctedString(raw){return applyCorrections(raw.toLowerCase().trim());}
 
-function setResult(parsed,{flash=true}={}){
+/* ================= Preview / result ================= */
+function setResult(parsed,{flash=false,raw=""}={}){
   $result.classList.remove("empty","flash-ok","flash-warn");
   let tab="",value="",meta="",aliasLine="",flashClass="flash-ok";
   switch(parsed.type){
@@ -303,13 +327,32 @@ function setResult(parsed,{flash=true}={}){
     case "no":tab="No Number";value=parsed.code;meta="Search the database by NO number.";break;
     case "grade":tab="Grade";value=titleCase(parsed.grade);meta="Show the grade card.";break;
     case "aftermarket":tab="Aftermarket";value=`+ ${parsed.count}`;meta=parsed.count===1?"Add 1 aftermarket.":`Add ${parsed.count} aftermarkets.`;break;
-    case "foil":tab="Foil";value=`${parsed.pounds} lb ${titleCase(parsed.kind)}`;meta="Recorded in foil tally.";break;
-    case "skip":tab="Ignored";value="—";meta=parsed.reason||"no match";flashClass="flash-warn";break;
+    case "foil":tab="Foil";value=`${parsed.pounds} lb ${titleCase(parsed.kind)}`;meta="Will be added to the foil tally on confirm.";break;
+    case "skip":tab="No match";value="—";meta=parsed.reason||"no match";flashClass="flash-warn";break;
   }
-  $result.innerHTML=`<div class="tab">${tab}</div><div class="value">${escapeHtml(value)}</div>`+
-    (aliasLine?`<div class="alias">${escapeHtml(aliasLine)}</div>`:"")+`<div class="meta">${meta}</div>`;
+  const corrected=raw?correctedString(raw):"";
+  const showCorrected=corrected&&corrected!==raw.toLowerCase().trim();
+  $result.innerHTML=
+    `<div class="tab">${tab}</div>`+
+    `<div class="value">${escapeHtml(value)}</div>`+
+    (aliasLine?`<div class="alias">${escapeHtml(aliasLine)}</div>`:"")+
+    (raw?`<div class="rawline"><b>Heard:</b> "${escapeHtml(raw)}"</div>`:"")+
+    (showCorrected?`<div class="corrected">auto-corrected to: "${escapeHtml(corrected)}"</div>`:"")+
+    `<div class="meta">${meta}</div>`+
+    (raw?`<button class="fixbtn" id="fixLast">✎ It misheard — add a correction</button>`:"");
+  if(raw){const f=$("fixLast");if(f)f.addEventListener("click",()=>{
+    $corrFrom.value=raw.toLowerCase().trim();$corrTo.value="";$corrTo.focus();
+    $corrTo.scrollIntoView({behavior:"smooth",block:"center"});
+  });}
   if(flash){void $result.offsetWidth;$result.classList.add(flashClass);}
 }
+function clearResult(){
+  $result.className="result empty";
+  $result.innerHTML=`<div class="tab">Waiting</div><div class="value">Speak or type a phrase.</div>`+
+    `<div class="meta">Part numbers treat <strong>O</strong> and <strong>0</strong> as interchangeable.</div>`;
+}
+
+/* ================= Log / foil ================= */
 function addLog(rawText,parsed){
   const empty=$log.querySelector(".log-empty");if(empty)empty.remove();
   const row=document.createElement("div");row.className="log-row";
@@ -318,12 +361,10 @@ function addLog(rawText,parsed){
   const out=parsed.type==="part"?parsed.code+(parsed.variants&&parsed.variants.length>1?"  (±O/0)":"")
     :parsed.type==="no"?parsed.code:parsed.type==="grade"?titleCase(parsed.grade)
     :parsed.type==="aftermarket"?`+${parsed.count} Aftermarket`:parsed.type==="foil"?`${parsed.pounds} lb ${parsed.kind}`:"";
-  let display=`“${rawText}”`;
-  if(parsed.type!=="skip")display+=`  →  ${out}`;else if(parsed.reason)display+=`  ·  ${parsed.reason}`;
-  txt.textContent=display;
+  txt.textContent=`"${rawText}"  →  ${out}`;
   const tag=document.createElement("div");tag.className="log-tag";
   const map={part:["Part #","tag-part"],no:["No #","tag-no"],grade:["Grade","tag-grade"],
-    aftermarket:["Aftermkt","tag-after"],foil:["Foil","tag-foil"],skip:["Ignored","tag-skip"]};
+    aftermarket:["Aftermkt","tag-after"],foil:["Foil","tag-foil"]};
   const[tagText,tagClass]=map[parsed.type];tag.classList.add(tagClass);tag.textContent=tagText;
   row.append(t,txt,tag);$log.prepend(row);
 }
@@ -339,7 +380,7 @@ function renderFoilEntries(){
     const r=document.createElement("span");r.style.color="var(--muted)";r.textContent=e.time;
     row.append(l,r);$foilList.appendChild(row);}
 }
-$clearLog.addEventListener("click",()=>{$log.innerHTML='<div class="log-empty">Nothing parsed yet.</div>';});
+$clearLog.addEventListener("click",()=>{$log.innerHTML='<div class="log-empty">Nothing confirmed yet.</div>';});
 $clearFoils.addEventListener("click",()=>{foilEntries.length=0;renderFoilEntries();});
 
 /* ================= Speech synthesis (readback) ================= */
@@ -353,119 +394,58 @@ function spokenConfirmation(p){switch(p.type){
 $speakToggle.addEventListener("click",()=>{speakOn=!speakOn;
   $speakToggle.textContent=speakOn?"🔊 Speak: On":"🔊 Speak: Off";$speakToggle.classList.toggle("off",!speakOn);});
 
-/* ================= Entry points ================= */
-function previewPhrase(text){
-  if(!text.trim()){$result.classList.add("empty");
-    $result.innerHTML=`<div class="tab">Waiting</div><div class="value">Speak or type something.</div>`+
-      `<div class="meta">Part numbers treat <strong>O</strong> and <strong>0</strong> as interchangeable.</div>`;return;}
-  setResult(parsePhrase(text),{flash:false});
-}
-function commitPhrase(rawText){
-  const text=rawText.trim();if(!text)return;
+/* ================= Flow ================= */
+function preview(){
+  const text=$entry.value;
+  lastRaw=text.trim();
+  if(!text.trim()){clearResult();$confirmBtn.disabled=true;return;}
   const parsed=parsePhrase(text);
-  setResult(parsed,{flash:true});addLog(text,parsed);
+  setResult(parsed,{flash:false,raw:text.trim()});
+  $confirmBtn.disabled=(parsed.type==="skip");
+}
+function confirmEntry(){
+  const text=$entry.value.trim();if(!text)return;
+  const parsed=parsePhrase(text);
+  if(parsed.type==="skip"){setResult(parsed,{flash:true,raw:text});return;}
+  setResult(parsed,{flash:true,raw:text});
+  addLog(text,parsed);
   if(parsed.type==="foil")addFoilEntry({pounds:parsed.pounds,kind:parsed.kind,time:fmtTime()});
   const phrase=spokenConfirmation(parsed);if(phrase)speak(phrase);
+  $entry.value="";$confirmBtn.disabled=true;
+  setTimeout(()=>{clearResult();$entry.focus();},650);
 }
-$entry.addEventListener("input",()=>previewPhrase($entry.value));
-$entry.addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();commitPhrase($entry.value);$entry.value="";previewPhrase("");}});
-$parseBtn.addEventListener("click",()=>{commitPhrase($entry.value);$entry.value="";previewPhrase("");$entry.focus();});
+$entry.addEventListener("input",preview);
+$entry.addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();confirmEntry();}});
+$confirmBtn.addEventListener("click",confirmEntry);
 
-/* ================= Voice engine (Whisper, in-browser) ================= */
-let transcriber=null,loadingModel=false,recording=false;
-let mediaStream=null,mediaRecorder=null,chunks=[];
-
-function vstatus(msg,cls=""){$vstatusEl.className="vstatus "+cls;$vstatusEl.textContent=msg;}
-
-async function loadModel(){
-  if(loadingModel||transcriber)return;
-  loadingModel=true;$loadBtn.disabled=true;$modelSel.disabled=true;
-  const modelId=$modelSel.value;
-  const name=modelId.split("/").pop();
-  // Try 8-bit first (small + WASM-compatible), then full precision as a safe fallback.
-  // Avoids the 4-bit "MatMulNBits" build that ONNX Runtime Web can't open.
-  const dtypeTries=["q8","fp32"];
-  let lastErr=null;
-  for(const dtype of dtypeTries){
-    try{
-      vstatus(`Loading ${name} (${dtype})… downloads once, then cached.`,"work");
-      transcriber=await pipeline("automatic-speech-recognition",modelId,{
-        device:"wasm",   // force WASM so every device behaves identically
-        dtype,           // explicit precision — key fix for the load error
-        progress_callback:p=>{
-          if(p.status==="progress"&&typeof p.progress==="number")
-            vstatus(`Downloading ${name} (${dtype})… ${Math.round(p.progress)}%`,"work");
-        }
-      });
-      vstatus("Voice engine ready. Hold the button, say ONE phrase, release.","ok");
-      $pttBtn.disabled=false;loadingModel=false;return;
-    }catch(err){
-      console.error("dtype",dtype,err);lastErr=err;transcriber=null;
-      vstatus(`The ${dtype} build didn't load — trying a more compatible one…`,"work");
-    }
-  }
-  vstatus("Couldn't load the voice engine: "+(lastErr?.message||lastErr)+"  · Typing still works.","err");
-  $loadBtn.disabled=false;$modelSel.disabled=false;loadingModel=false;
-}
-$loadBtn.addEventListener("click",loadModel);
-
-// Decode a recorded blob to mono Float32 at 16 kHz (what Whisper expects).
-async function blobToPCM16k(blob){
-  const buf=await blob.arrayBuffer();
-  const AC=window.AudioContext||window.webkitAudioContext;
-  const ctx=new AC();
-  const decoded=await new Promise((resolve,reject)=>{
-    const p=ctx.decodeAudioData(buf,resolve,reject);if(p&&p.then)p.then(resolve,reject);
+/* ================= Corrections UI ================= */
+function renderCorrections(){
+  $corrList.innerHTML="";
+  if(!corrections.length){$corrList.innerHTML='<div class="corr-empty">No corrections yet. When a device mishears the same way, add it here.</div>';return;}
+  corrections.forEach((c,i)=>{
+    const row=document.createElement("div");row.className="corr-item";
+    row.innerHTML=`<span class="from">"${escapeHtml(c.from)}"</span><span class="arr">→</span><span class="to">"${escapeHtml(c.to)}"</span>`;
+    const del=document.createElement("button");del.className="del";del.textContent="✕";del.title="Remove";
+    del.addEventListener("click",()=>{corrections.splice(i,1);saveCorrections();renderCorrections();preview();});
+    row.appendChild(del);$corrList.appendChild(row);
   });
-  const frames=Math.ceil(decoded.duration*16000);
-  const off=new OfflineAudioContext(1,Math.max(1,frames),16000);
-  const src=off.createBufferSource();src.buffer=decoded;src.connect(off.destination);src.start(0);
-  const rendered=await off.startRendering();
-  try{ctx.close();}catch(_){}
-  return rendered.getChannelData(0);
 }
-
-async function startRecording(){
-  if(recording||!transcriber)return;
-  try{mediaStream=await navigator.mediaDevices.getUserMedia({audio:true});}
-  catch(err){vstatus("Microphone blocked: "+(err?.message||err),"err");return;}
-  chunks=[];
-  const mime=MediaRecorder.isTypeSupported("audio/webm")?"audio/webm":
-             MediaRecorder.isTypeSupported("audio/mp4")?"audio/mp4":"";
-  mediaRecorder=mime?new MediaRecorder(mediaStream,{mimeType:mime}):new MediaRecorder(mediaStream);
-  mediaRecorder.ondataavailable=e=>{if(e.data&&e.data.size)chunks.push(e.data);};
-  mediaRecorder.start();
-  recording=true;$pttBtn.classList.add("recording");$pttBtn.textContent="Listening… release to send";
-  vstatus("Listening…","work");
+function addCorrection(){
+  const from=$corrFrom.value.trim().toLowerCase();
+  const to=$corrTo.value.trim();
+  if(!from){$corrFrom.focus();return;}
+  corrections=corrections.filter(c=>c.from!==from); // replace duplicate
+  corrections.push({from,to});
+  saveCorrections();renderCorrections();
+  $corrFrom.value="";$corrTo.value="";$corrFrom.focus();
+  preview(); // re-run preview so an active mishear updates live
 }
-async function stopRecording(){
-  if(!recording)return;recording=false;
-  $pttBtn.classList.remove("recording");$pttBtn.textContent="Transcribing…";$pttBtn.disabled=true;
-  vstatus("Transcribing…","work");
-  await new Promise(resolve=>{mediaRecorder.onstop=resolve;try{mediaRecorder.stop();}catch(_){resolve();}});
-  if(mediaStream)mediaStream.getTracks().forEach(t=>t.stop());
-  try{
-    const blob=new Blob(chunks,{type:mediaRecorder.mimeType||"audio/webm"});
-    const pcm=await blobToPCM16k(blob);
-    const out=await transcriber(pcm);
-    const raw=(out&&out.text?out.text:"").trim();
-    $heardRaw.textContent=raw||"(nothing heard)";
-    if(raw){$entry.value=raw;commitPhrase(raw);$entry.value="";previewPhrase("");}
-    vstatus("Ready. Hold the button and say the next phrase.","ok");
-  }catch(err){
-    console.error(err);vstatus("Transcription failed: "+(err?.message||err),"err");
-  }finally{$pttBtn.disabled=false;$pttBtn.textContent="Hold to talk";}
-}
+$corrAdd.addEventListener("click",addCorrection);
+$corrTo.addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();addCorrection();}});
 
-$pttBtn.addEventListener("pointerdown",e=>{e.preventDefault();startRecording();});
-$pttBtn.addEventListener("pointerup",e=>{e.preventDefault();stopRecording();});
-$pttBtn.addEventListener("pointercancel",()=>stopRecording());
-$pttBtn.addEventListener("pointerleave",()=>{if(recording)stopRecording();});
-
-/* URL test hook: ?say=nissan 45 */
-const urlParams=new URLSearchParams(location.search);
-if(urlParams.has("say"))setTimeout(()=>commitPhrase(urlParams.get("say")),150);
-
+/* ================= Init ================= */
+renderCorrections();
+clearResult();
 $entry.focus();
 </script>
 </body>
