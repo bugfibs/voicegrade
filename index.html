@@ -119,8 +119,8 @@
   <div class="voicerow">
     <label for="modelSel" style="font-size:13px;color:var(--muted);">Engine</label>
     <select id="modelSel">
-      <option value="Xenova/whisper-tiny.en">Whisper tiny.en — fastest (~75 MB)</option>
-      <option value="Xenova/whisper-base.en">Whisper base.en — more accurate (~145 MB)</option>
+      <option value="Xenova/whisper-tiny.en">Whisper tiny.en — best for phones (~75 MB)</option>
+      <option value="Xenova/whisper-base.en">Whisper base.en — more accurate, desktop only (~145 MB)</option>
     </select>
     <button id="loadBtn" class="btn-secondary">Enable voice (downloads once)</button>
   </div>
@@ -163,9 +163,10 @@
 </div>
 
 <script type="module">
-import { pipeline, env } from "https://cdn.jsdelivr.net/npm/@huggingface/transformers";
+import { pipeline, env } from "https://cdn.jsdelivr.net/npm/@huggingface/transformers@3";
 
-env.allowLocalModels = false; // fetch from HF CDN, cache in the browser
+env.allowLocalModels = false;        // fetch from HF CDN, cache in the browser
+env.backends.onnx.wasm.proxy = true; // run inference in a worker so the page can't freeze
 
 /* ================= Reference data ================= */
 const BRAND_CODES={"bmw":"BMW","chrysler":"CHR","diesel":"DIE","ford":"FRD","gm":"GEM","general motors":"GEM",
