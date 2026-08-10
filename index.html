@@ -287,12 +287,14 @@ function matchGrade(tokens){const joined=tokens.join(" ");
 function parsePhrase(rawText){
   const {tokens}=normalize(rawText);
   if(!tokens.length)return{type:"skip",reason:"empty"};
-  if(tokens[0]===FOIL_TRIGGER){
-    const rest=tokens.slice(1).filter(t=>!["pounds","pound","lbs","lb","of"].includes(t));
+  const hasKind=tokens.includes("foreign")||tokens.includes("domestic");
+  const hasWeight=tokens.some(t=>["pound","pounds","lb","lbs"].includes(t));
+  if(tokens.includes(FOIL_TRIGGER)||(hasKind&&hasWeight)){
+    const rest=tokens.filter(t=>t!==FOIL_TRIGGER&&!["pounds","pound","lbs","lb","of"].includes(t));
     let kind=null;if(rest.includes("foreign"))kind="foreign";else if(rest.includes("domestic"))kind="domestic";
     const numTokens=rest.filter(isNumberToken);
     const pounds=numTokens.length?parseInt(parseNumberTokens(numTokens)||"0",10):null;
-    if(!kind||!pounds)return{type:"skip",reason:"foil needs a weight and 'foreign' or 'domestic' (e.g. 'foil 4 pounds foreign')"};
+    if(!kind||!pounds)return{type:"skip",reason:"foil needs a weight and 'foreign' or 'domestic' (e.g. '3 pound foreign' or 'foil 4 pounds foreign')"};
     return{type:"foil",pounds,kind};
   }
   if(tokens.every(t=>AFTERMARKET_WORDS.includes(t)))return{type:"aftermarket",count:1};
