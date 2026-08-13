@@ -121,12 +121,18 @@
 <section class="inputwrap">
   <div class="inputbar">
     <input id="entry" type="text" autocomplete="off" spellcheck="false" enterkeyhint="done"
-      placeholder="Tap here, then tap 🎤 on your keyboard and speak…" />
+      placeholder="Speak, or tap the box and use dictation…" />
+    <button id="micBtn" class="confirm" style="background:var(--accent);display:none;">🎤 Talk</button>
     <button id="confirmBtn" class="confirm" disabled>✓ Confirm</button>
   </div>
+  <div class="hint" id="micRow" style="display:none;">
+    <label style="cursor:pointer;"><input type="checkbox" id="handsFree" style="vertical-align:middle;"> <b>Hands-free mode</b> — after each phrase, auto-confirm and keep listening (computer only).</label>
+    <span id="micStatus" style="margin-left:8px;"></span>
+  </div>
   <div class="hint">
-    <b>How to use:</b> tap the box, then tap the <b>🎤 microphone key</b> on your keyboard (or your computer's dictation) and say one phrase.
-    Check the preview, then tap <b>Confirm</b> to log it. Nothing is logged until you confirm — so a mishear is never a wrong entry.
+    <b>On a phone:</b> tap the box, then tap the <b>🎤 microphone key</b> on your keyboard and say one phrase.
+    <b>On a computer:</b> use the <b>🎤 Talk</b> button above (Chrome), or Windows <b>Win+H</b> / Mac Dictation.
+    Check the preview, then <b>Confirm</b> to log it — nothing is logged until you confirm.
   </div>
 </section>
 
@@ -492,6 +498,33 @@ function confirmEntry(){
 $entry.addEventListener("input",preview);
 $entry.addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();confirmEntry();}});
 $confirmBtn.addEventListener("click",confirmEntry);
+
+/* ================= Chrome in-page mic (desktop) ================= */
+const $micBtn=$("micBtn"),$micRow=$("micRow"),$micStatus=$("micStatus"),$handsFree=$("handsFree");
+const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+let recog=null,micActive=false;
+if(SR){
+  // Only surface the in-page mic where it actually works (desktop Chrome).
+  $micBtn.style.display="";$micRow.style.display="";
+  function buildRecog(){
+    const r=new SR();r.lang="en-US";r.interimResults=false;r.maxAlternatives=1;r.continuous=false;
+    r.onresult=e=>{
+      const t=(e.results[e.results.length-1][0].transcript||"").trim();
+      if(t){$entry.value=t;preview();if($handsFree.checked)confirmEntry();}
+    };
+    r.onerror=e=>{if(e.error==="not-allowed"){micStatus("Mic blocked — allow it in the address bar.");stopMic();}};
+    r.onend=()=>{ if(micActive&&$handsFree.checked){try{r.start();}catch(_){}} else {micActive=false;paintMic();} };
+    return r;
+  }
+  function micStatus(m){$micStatus.textContent=m;}
+  function paintMic(){$micBtn.textContent=micActive?"⏹ Stop":"🎤 Talk";
+    $micBtn.style.background=micActive?"var(--listening,#ef4444)":"var(--accent)";
+    micStatus(micActive?($handsFree.checked?"Listening (hands-free)…":"Listening…"):"");}
+  function startMic(){if(!recog)recog=buildRecog();try{recog.start();micActive=true;paintMic();}catch(_){}}
+  function stopMic(){micActive=false;if(recog){try{recog.stop();}catch(_){}}paintMic();}
+  $micBtn.addEventListener("click",()=>micActive?stopMic():startMic());
+  $handsFree.addEventListener("change",()=>{if(micActive)paintMic();});
+}
 
 /* ================= Corrections UI ================= */
 function renderCorrections(){
