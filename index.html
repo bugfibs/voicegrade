@@ -304,7 +304,7 @@ function matchBrand(tokens){
 function matchGrade(tokens){const joined=tokens.join(" ");
   for(const g of GRADES){if(joined===g)return g;if(joined.startsWith(g+" "))return g;}return null;}
 // Named NO# lookups: a spoken name -> one or more NO# codes.
-const QTY_WORDS=["quantity","qty","times"];
+const QTY_WORDS=["quantity","qty","times","time","star","asterisk"];
 function matchAlias(tokens){
   const joined=tokens.join(" ");
   for(const a of aliases){if(a.name&&joined===a.name)return a;}
@@ -326,6 +326,14 @@ function extractQuantity(tokens){
 }
 function parseBase(tokens){
   if(!tokens.length)return{type:"skip",reason:"empty"};
+  // "no number [term]" / "no [term]" → free-text search of the NO# section
+  if(tokens[0]==="no"){
+    let rest=tokens.slice(1);
+    if(rest[0]==="number")rest=rest.slice(1);
+    const term=rest.filter(t=>t!=="__SPACE__").join(" ").trim();
+    if(term)return{type:"nosearch",term};
+    return{type:"skip",reason:"say a term after 'no number', e.g. 'no number fusion'"};
+  }
   const hasKind=tokens.includes("foreign")||tokens.includes("domestic");
   const hasWeight=tokens.some(t=>["pound","pounds","lb","lbs"].includes(t));
   if(tokens.includes(FOIL_TRIGGER)||(hasKind&&hasWeight)){
@@ -382,17 +390,21 @@ function setResult(parsed,{flash=false,raw=""}={}){
         tab=parsed.name?"No Number (name)":"No Number";value=parsed.code;
         meta=parsed.name?`"${titleCase(parsed.name)}" → search this NO#.`:"Search the database by NO number.";
       }break;
+    case "nosearch":tab="No Number — text search";value=`"${parsed.term}"`;
+      meta=`Search the NO# section for the term "${parsed.term}".`;break;
     case "grade":tab="Grade";value=titleCase(parsed.grade);meta="Show the grade card.";break;
     case "aftermarket":tab="Aftermarket";value=`+ ${parsed.count}`;meta=parsed.count===1?"Add 1 aftermarket.":`Add ${parsed.count} aftermarkets.`;break;
     case "foil":tab="Foil";value=`${parsed.pounds} lb ${titleCase(parsed.kind)}`;meta="Will be added to the foil tally on confirm.";break;
     case "skip":tab="No match";value="—";meta=parsed.reason||"no match";flashClass="flash-warn";break;
   }
+  const qtyLine=(parsed.type!=="skip"&&parsed.type!=="aftermarket"&&parsed.quantity>1)?`Quantity: ${parsed.quantity}`:"";
   if(parsed.type!=="skip"&&parsed.quantity>1&&parsed.type!=="aftermarket"){value+=`  × ${parsed.quantity}`;}
   const corrected=raw?correctedString(raw):"";
   const showCorrected=corrected&&corrected!==raw.toLowerCase().trim();
   $result.innerHTML=
     `<div class="tab">${tab}</div>`+
     `<div class="value">${escapeHtml(value)}</div>`+
+    (qtyLine?`<div class="alias">${escapeHtml(qtyLine)}</div>`:"")+
     (aliasLine?`<div class="alias">${escapeHtml(aliasLine)}</div>`:"")+
     (raw?`<div class="rawline"><b>Heard:</b> "${escapeHtml(raw)}"</div>`:"")+
     (showCorrected?`<div class="corrected">auto-corrected to: "${escapeHtml(corrected)}"</div>`:"")+
@@ -418,12 +430,13 @@ function addLog(rawText,parsed){
   const txt=document.createElement("div");txt.className="log-text";
   let out=parsed.type==="part"?parsed.code+(parsed.variants&&parsed.variants.length>1?"  (±O/0)":"")
     :parsed.type==="no"?((parsed.candidates&&parsed.candidates.length>1)?parsed.candidates.join("/"):parsed.code)
+    :parsed.type==="nosearch"?`NO# search: "${parsed.term}"`
     :parsed.type==="grade"?titleCase(parsed.grade)
     :parsed.type==="aftermarket"?`+${parsed.count} Aftermarket`:parsed.type==="foil"?`${parsed.pounds} lb ${parsed.kind}`:"";
   if(parsed.quantity>1&&parsed.type!=="aftermarket")out+=` ×${parsed.quantity}`;
   txt.textContent=`"${rawText}"  →  ${out}`;
   const tag=document.createElement("div");tag.className="log-tag";
-  const map={part:["Part #","tag-part"],no:["No #","tag-no"],grade:["Grade","tag-grade"],
+  const map={part:["Part #","tag-part"],no:["No #","tag-no"],nosearch:["No# search","tag-no"],grade:["Grade","tag-grade"],
     aftermarket:["Aftermkt","tag-after"],foil:["Foil","tag-foil"]};
   const[tagText,tagClass]=map[parsed.type];tag.classList.add(tagClass);tag.textContent=tagText;
   row.append(t,txt,tag);$log.prepend(row);
@@ -447,7 +460,9 @@ $clearFoils.addEventListener("click",()=>{foilEntries.length=0;renderFoilEntries
 function speak(text){if(!speakOn||!("speechSynthesis"in window))return;
   try{speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(text);u.rate=1.05;speechSynthesis.speak(u);}catch(_){}}
 function spokenConfirmation(p){switch(p.type){
-  case "part":case "no":return p.code.split("").join(" ");
+  case "part":return p.code.split("").join(" ");
+  case "no":return (p.candidates&&p.candidates.length>1)?p.name:(p.code||"").split("").join(" ");
+  case "nosearch":return `no number ${p.term}`;
   case "grade":return p.grade;
   case "aftermarket":return p.count===1?"one aftermarket":`${p.count} aftermarkets`;
   case "foil":return `foil ${p.pounds} ${p.kind}`;default:return null;}}
