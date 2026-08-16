@@ -172,14 +172,12 @@
 </section>
 
 <section class="corrections">
-  <div class="panel-header"><h2>Names — say a common name, search its NO#</h2></div>
+  <div class="panel-header"><h2>NO# search terms — say it, it searches the No Number tab</h2></div>
   <div class="addrow">
-    <input id="aliasName" type="text" placeholder="Name (e.g. bubble gum)" />
-    <span class="arrow">→</span>
-    <input id="aliasCodes" type="text" placeholder="NO# code(s), comma-separated (e.g. HON050)" />
-    <button id="aliasAdd" class="addbtn">Add</button>
+    <input id="termInput" type="text" placeholder="Term as your database spells it (e.g. 4 dot)" />
+    <button id="termAdd" class="addbtn">Add</button>
   </div>
-  <div id="aliasList" class="corr-list"></div>
+  <div id="termList" class="corr-list"></div>
 </section>
 
 <div class="help">
@@ -193,14 +191,17 @@
   Add <code>quantity 2</code> to the end of any entry to set a count.
 </div>
 
+<script src="data.js"></script>
 <script>
-/* ================= Reference data ================= */
-const BRAND_CODES={"bmw":"BMW","chrysler":"CHR","diesel":"DIE","ford":"FRD","gm":"GEM","general motors":"GEM",
+/* ================= Reference data (from data.js, with fallback) ================= */
+const _D=(window.VG_DATA||{});
+const BRAND_CODES=_D.brandCodes||{"bmw":"BMW","chrysler":"CHR","diesel":"DIE","ford":"FRD","gm":"GEM","general motors":"GEM",
   "honda":"HON","hyundai":"HYU","isuzu":"ISU","jaguar":"JAG","mazda":"MAZ","mercedes":"MER","mercedes benz":"MER",
   "mitsubishi":"MIT","nissan":"NIS","subaru":"SUB","suzuki":"SUZ","toyota":"TOY","volkswagen":"VLK","vw":"VLK","volvo":"VOL"};
-const GRADES=["aftermarket california only","low grade foreign","low foreign pre","medium foreign","small foreign",
+const GRADES=(_D.grades||["aftermarket california only","low grade foreign","low foreign pre","medium foreign","small foreign",
   "large foreign","foreign pre","jumbo pellets","small cast","large cast","xl foreign","high reg","high pre","low reg",
-  "low pre","mid reg","mid pre","junk pre","pellets"].sort((a,b)=>b.length-a.length);
+  "low pre","mid reg","mid pre","junk pre","pellets"]).slice().sort((a,b)=>b.length-a.length);
+const NO_TERMS=_D.noTerms||[];
 const FOIL_TRIGGER="foil";
 const AFTERMARKET_WORDS=["aftermarket","aftermarkets"];
 const NUMBER_WORDS={"zero":0,"oh":0,"o":0,"one":1,"two":2,"three":3,"four":4,"five":5,"six":6,"seven":7,"eight":8,"nine":9,
@@ -225,11 +226,26 @@ let corrections=loadCorrections();
 function loadCorrections(){try{const s=localStorage.getItem("vg_corrections");return s?JSON.parse(s):[];}catch(_){return[];}}
 function saveCorrections(){try{localStorage.setItem("vg_corrections",JSON.stringify(corrections));}catch(_){}}
 
-// Named NO# lookups (name -> [codes]). Seeded with one example you gave.
-let aliases=loadAliases();
-function loadAliases(){try{const s=localStorage.getItem("vg_aliases");if(s)return JSON.parse(s);}catch(_){}
-  return[{name:"bubble gum",codes:["HON050"]}];}
-function saveAliases(){try{localStorage.setItem("vg_aliases",JSON.stringify(aliases));}catch(_){}}
+// NO# search terms. Built-ins come from data.js; users can add their own.
+// A term is the string sent to the No Number search box, spelled as the DB has it.
+let userTerms=loadUserTerms();
+function loadUserTerms(){try{const s=localStorage.getItem("vg_noterms");if(s)return JSON.parse(s);}catch(_){}return[];}
+function saveUserTerms(){try{localStorage.setItem("vg_noterms",JSON.stringify(userTerms));}catch(_){}}
+let noTermIndex=[];
+function rebuildNoTerms(){
+  noTermIndex=[];
+  const add=(term,say,builtin)=>{
+    const t=String(term).trim(); if(!t)return;
+    const forms=(say&&say.length?say:[t]);
+    for(const f of forms) noTermIndex.push({term:t,canon:canonPhrase(String(f).toLowerCase().trim().split(/\s+/)),builtin});
+  };
+  for(const n of NO_TERMS){ if(typeof n==="string")add(n,null,true); else add(n.term,n.say,true); }
+  for(const t of userTerms) add(t,null,false);
+}
+// Homophone/number-word folding so "four", "for", "4" all match (matching only).
+const HOMOPHONES={"for":"4","fore":"4","to":"2","too":"2","ate":"8","won":"1","free":"3","tree":"3","ex":"x"};
+function canonToken(t){if(t in HOMOPHONES)return HOMOPHONES[t];if(t in NUMBER_WORDS)return String(NUMBER_WORDS[t]);return t;}
+function canonPhrase(tokens){return tokens.map(canonToken).join(" ").replace(/\s+/g," ").trim();}
 const escapeRegex=s=>s.replace(/[.*+?^${}()|[\]\\]/g,"\\$&");
 function applyCorrections(text){
   for(const c of corrections){
@@ -311,9 +327,9 @@ function matchGrade(tokens){const joined=tokens.join(" ");
   for(const g of GRADES){if(joined===g)return g;if(joined.startsWith(g+" "))return g;}return null;}
 // Named NO# lookups: a spoken name -> one or more NO# codes.
 const QTY_WORDS=["quantity","qty","times","time","star","asterisk"];
-function matchAlias(tokens){
-  const joined=tokens.join(" ");
-  for(const a of aliases){if(a.name&&joined===a.name)return a;}
+function matchNoTerm(tokens){
+  const key=canonPhrase(tokens);
+  for(const t of noTermIndex){if(t.canon===key)return t.term;}
   return null;
 }
 // Pull a trailing "quantity N" / "qty N" / "times N" off the token list.
@@ -360,8 +376,8 @@ function parseBase(tokens){
     if(numTokens.length&&numTokens.every(isNumberToken)){const digits=parseNumberTokens(numTokens);
       if(digits)return{type:"no",code:brand.code+digits.padStart(3,"0")};}
     return{type:"skip",reason:`heard brand '${brand.code}' but no number after it`};}
-  const alias=matchAlias(tokens);
-  if(alias)return{type:"no",name:alias.name,code:alias.codes[0],candidates:alias.codes.slice()};
+  const noTerm=matchNoTerm(tokens);
+  if(noTerm)return{type:"nosearch",term:noTerm,known:true};
   if(tokens.every(t=>t==="__SPACE__"||isWordToken(t))){const id=buildIdentifier(tokens).toUpperCase();
     if(id.trim().length)return{type:"part",code:id,variants:aliasVariants(id)};}
   return{type:"skip",reason:"didn't match any known pattern"};
@@ -551,36 +567,41 @@ function addCorrection(){
 $corrAdd.addEventListener("click",addCorrection);
 $corrTo.addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();addCorrection();}});
 
-/* ================= Names (NO# aliases) UI ================= */
-const $aliasName=$("aliasName"),$aliasCodes=$("aliasCodes"),$aliasAdd=$("aliasAdd"),$aliasList=$("aliasList");
-function renderAliases(){
-  $aliasList.innerHTML="";
-  if(!aliases.length){$aliasList.innerHTML='<div class="corr-empty">No names yet. Map a common name to its NO# code(s) here.</div>';return;}
-  aliases.forEach((a,i)=>{
+/* ================= NO# search-terms UI ================= */
+const $termInput=$("termInput"),$termAdd=$("termAdd"),$termList=$("termList");
+function renderTerms(){
+  $termList.innerHTML="";
+  const builtinCount=noTermIndex.filter(t=>t.builtin).length;
+  if(!userTerms.length){
+    $termList.innerHTML=`<div class="corr-empty">No custom terms yet.${builtinCount?` (${builtinCount} built-in term${builtinCount>1?"s":""} loaded from data.js are active.)`:""}</div>`;
+    return;
+  }
+  userTerms.forEach((t,i)=>{
     const row=document.createElement("div");row.className="corr-item";
-    row.innerHTML=`<span class="from">"${escapeHtml(a.name)}"</span><span class="arr">→</span><span class="to">${escapeHtml(a.codes.join(", "))}</span>`;
+    row.innerHTML=`<span class="to">"${escapeHtml(t)}"</span><span class="arr">→</span><span class="from">No Number search</span>`;
     const del=document.createElement("button");del.className="del";del.textContent="✕";del.title="Remove";
-    del.addEventListener("click",()=>{aliases.splice(i,1);saveAliases();renderAliases();preview();});
-    row.appendChild(del);$aliasList.appendChild(row);
+    del.addEventListener("click",()=>{userTerms.splice(i,1);saveUserTerms();rebuildNoTerms();renderTerms();preview();});
+    row.appendChild(del);$termList.appendChild(row);
   });
+  if(builtinCount){const note=document.createElement("div");note.className="corr-empty";
+    note.textContent=`Plus ${builtinCount} built-in term${builtinCount>1?"s":""} from data.js.`;$termList.appendChild(note);}
 }
-function addAlias(){
-  const name=$aliasName.value.trim().toLowerCase();
-  const codes=$aliasCodes.value.trim().toUpperCase().split(",").map(s=>s.trim()).filter(Boolean);
-  if(!name){$aliasName.focus();return;}
-  if(!codes.length){$aliasCodes.focus();return;}
-  aliases=aliases.filter(a=>a.name!==name); // replace duplicate
-  aliases.push({name,codes});
-  saveAliases();renderAliases();
-  $aliasName.value="";$aliasCodes.value="";$aliasName.focus();
+function addTerm(){
+  const term=$termInput.value.trim();
+  if(!term){$termInput.focus();return;}
+  userTerms=userTerms.filter(t=>t.toLowerCase()!==term.toLowerCase());
+  userTerms.push(term);
+  saveUserTerms();rebuildNoTerms();renderTerms();
+  $termInput.value="";$termInput.focus();
   preview();
 }
-$aliasAdd.addEventListener("click",addAlias);
-$aliasCodes.addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();addAlias();}});
+$termAdd.addEventListener("click",addTerm);
+$termInput.addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();addTerm();}});
 
 /* ================= Init ================= */
+rebuildNoTerms();
 renderCorrections();
-renderAliases();
+renderTerms();
 clearResult();
 $entry.focus();
 </script>
