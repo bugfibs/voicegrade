@@ -237,7 +237,7 @@ function rebuildNoTerms(){
   const add=(term,say,builtin)=>{
     const t=String(term).trim(); if(!t)return;
     const forms=(say&&say.length?say:[t]);
-    for(const f of forms) noTermIndex.push({term:t,canon:canonPhrase(String(f).toLowerCase().trim().split(/\s+/)),builtin});
+    for(const f of forms) noTermIndex.push({term:t,canon:canonStr(f),builtin});
   };
   for(const n of NO_TERMS){ if(typeof n==="string")add(n,null,true); else add(n.term,n.say,true); }
   for(const t of userTerms) add(t,null,false);
@@ -245,7 +245,7 @@ function rebuildNoTerms(){
 // Homophone/number-word folding so "four", "for", "4" all match (matching only).
 const HOMOPHONES={"for":"4","fore":"4","to":"2","too":"2","ate":"8","won":"1","free":"3","tree":"3","ex":"x"};
 function canonToken(t){if(t in HOMOPHONES)return HOMOPHONES[t];if(t in NUMBER_WORDS)return String(NUMBER_WORDS[t]);return t;}
-function canonPhrase(tokens){return tokens.map(canonToken).join(" ").replace(/\s+/g," ").trim();}
+function canonStr(s){return String(s).toLowerCase().replace(/[^a-z0-9]+/g," ").trim().split(/\s+/).filter(Boolean).map(canonToken).join("");}
 const escapeRegex=s=>s.replace(/[.*+?^${}()|[\]\\]/g,"\\$&");
 function applyCorrections(text){
   for(const c of corrections){
@@ -328,7 +328,8 @@ function matchGrade(tokens){const joined=tokens.join(" ");
 // Named NO# lookups: a spoken name -> one or more NO# codes.
 const QTY_WORDS=["quantity","qty","times","time","star","asterisk"];
 function matchNoTerm(tokens){
-  const key=canonPhrase(tokens);
+  const key=canonStr(tokens.filter(t=>t!=="__SPACE__").join(" "));
+  if(!key)return null;
   for(const t of noTermIndex){if(t.canon===key)return t.term;}
   return null;
 }
