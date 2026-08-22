@@ -32,6 +32,7 @@
     padding:15px 22px;color:#fff;background:var(--ok);white-space:nowrap;}
   .confirm:hover{background:#16a34a;}
   .confirm:disabled{background:var(--panel-2);color:var(--muted);cursor:not-allowed;}
+  .confirm.miss{background:var(--warn);color:#111;}
   .hint{font-size:12.5px;color:var(--muted);line-height:1.5;}
   .hint b{color:var(--text);}
 
@@ -156,7 +157,7 @@
 </section>
 
 <section class="panel">
-  <div class="panel-header"><h2>Confirmed Log</h2><button class="clear-btn" id="clearLog">Clear</button></div>
+  <div class="panel-header"><h2>Confirmed Log</h2><div><button class="clear-btn" id="exportLog">Export</button><button class="clear-btn" id="clearLog">Clear</button></div></div>
   <div id="log" class="log"><div class="log-empty">Nothing confirmed yet.</div></div>
 </section>
 
@@ -202,6 +203,7 @@ const GRADES=(_D.grades||["aftermarket california only","low grade foreign","low
   "large foreign","foreign pre","jumbo pellets","small cast","large cast","xl foreign","high reg","high pre","low reg",
   "low pre","mid reg","mid pre","junk pre","pellets"]).slice().sort((a,b)=>b.length-a.length);
 const NO_TERMS=_D.noTerms||[];
+const BUILTIN_CORRECTIONS=_D.corrections||[];
 const FOIL_TRIGGER="foil";
 const AFTERMARKET_WORDS=["aftermarket","aftermarkets"];
 const NUMBER_WORDS={"zero":0,"oh":0,"o":0,"one":1,"two":2,"three":3,"four":4,"five":5,"six":6,"seven":7,"eight":8,"nine":9,
@@ -213,12 +215,13 @@ const LETTER_SET="abcdefghijklmnopqrstuvwxyz".split("");
 /* ================= DOM ================= */
 const $=id=>document.getElementById(id);
 const $entry=$("entry"),$confirmBtn=$("confirmBtn"),$result=$("result"),$log=$("log"),
-  $clearLog=$("clearLog"),$clearFoils=$("clearFoils"),$foilForeign=$("foilForeign"),$foilDomestic=$("foilDomestic"),
+  $clearLog=$("clearLog"),$exportLog=$("exportLog"),$clearFoils=$("clearFoils"),$foilForeign=$("foilForeign"),$foilDomestic=$("foilDomestic"),
   $foilEntries=$("foilEntries"),$foilList=$("foilList"),$speakToggle=$("speakToggle"),
   $corrFrom=$("corrFrom"),$corrTo=$("corrTo"),$corrAdd=$("corrAdd"),$corrList=$("corrList");
 
 let speakOn=false;
 const foilEntries=[];
+const sessionLog=[];
 let lastRaw="";
 
 /* ================= Corrections (persist on device) ================= */
@@ -243,12 +246,13 @@ function rebuildNoTerms(){
   for(const t of userTerms) add(t,null,false);
 }
 // Homophone/number-word folding so "four", "for", "4" all match (matching only).
-const HOMOPHONES={"for":"4","fore":"4","to":"2","too":"2","ate":"8","won":"1","free":"3","tree":"3","ex":"x"};
+const HOMOPHONES={"for":"4","fore":"4","to":"2","too":"2","ate":"8","won":"1","free":"pre","tree":"3","ex":"x"};
 function canonToken(t){if(t in HOMOPHONES)return HOMOPHONES[t];if(t in NUMBER_WORDS)return String(NUMBER_WORDS[t]);return t;}
-function canonStr(s){return String(s).toLowerCase().replace(/[^a-z0-9]+/g," ").trim().split(/\s+/).filter(Boolean).map(canonToken).join("");}
+function canonStr(s){return String(s).toLowerCase().replace(/[^a-z0-9]+/g," ").trim().split(/\s+/).filter(Boolean).map(canonToken).join("").replace(/o/g,"0");}
+function sendableSpoken(tokens){return tokens.map(t=>(t in NUMBER_WORDS)?String(NUMBER_WORDS[t]):((t in HOMOPHONES)?HOMOPHONES[t]:t)).join(" ").replace(/\s+/g," ").trim();}
 const escapeRegex=s=>s.replace(/[.*+?^${}()|[\]\\]/g,"\\$&");
 function applyCorrections(text){
-  for(const c of corrections){
+  for(const c of BUILTIN_CORRECTIONS.concat(corrections)){
     if(!c.from)continue;
     try{text=text.replace(new RegExp("\\b"+escapeRegex(c.from)+"\\b","gi"),c.to);}catch(_){}
   }
@@ -328,9 +332,19 @@ function matchGrade(tokens){const joined=tokens.join(" ");
 // Named NO# lookups: a spoken name -> one or more NO# codes.
 const QTY_WORDS=["quantity","qty","times","time","star","asterisk"];
 function matchNoTerm(tokens){
-  const key=canonStr(tokens.filter(t=>t!=="__SPACE__").join(" "));
+  const clean=tokens.filter(t=>t!=="__SPACE__");
+  if(!clean.length)return null;
+  const key=canonStr(clean.join(" "));
   if(!key)return null;
-  for(const t of noTermIndex){if(t.canon===key)return t.term;}
+  // 1. Exact match -> send the catalog's exact spelling.
+  for(const t of noTermIndex){if(t.canon===key)return{term:t.term,exact:true};}
+  // 2. Partial: your words are part of a known term, or contain one -> NO# search of your words.
+  if(key.length>=4&&/[a-z]/.test(key)){
+    for(const t of noTermIndex){
+      if(t.canon.length>=4&&(t.canon.includes(key)||key.includes(t.canon)))
+        return{term:sendableSpoken(clean),exact:false,via:t.term};
+    }
+  }
   return null;
 }
 // Pull a trailing "quantity N" / "qty N" / "times N" off the token list.
@@ -378,7 +392,7 @@ function parseBase(tokens){
       if(digits)return{type:"no",code:brand.code+digits.padStart(3,"0")};}
     return{type:"skip",reason:`heard brand '${brand.code}' but no number after it`};}
   const noTerm=matchNoTerm(tokens);
-  if(noTerm)return{type:"nosearch",term:noTerm,known:true};
+  if(noTerm)return{type:"nosearch",term:noTerm.term,known:noTerm.exact,via:noTerm.via};
   if(tokens.every(t=>t==="__SPACE__"||isWordToken(t))){const id=buildIdentifier(tokens).toUpperCase();
     if(id.trim().length)return{type:"part",code:id,variants:aliasVariants(id)};}
   return{type:"skip",reason:"didn't match any known pattern"};
@@ -414,7 +428,7 @@ function setResult(parsed,{flash=false,raw=""}={}){
         meta=parsed.name?`"${titleCase(parsed.name)}" → search this NO#.`:"Search the database by NO number.";
       }break;
     case "nosearch":tab="No Number — text search";value=`"${parsed.term}"`;
-      meta=`Search the NO# section for the term "${parsed.term}".`;break;
+      meta=parsed.via?`Part of your catalog ("${parsed.via}") — searches NO# for "${parsed.term}".`:`Search the NO# section for the term "${parsed.term}".`;break;
     case "grade":tab="Grade";value=titleCase(parsed.grade);meta="Show the grade card.";break;
     case "aftermarket":tab="Aftermarket";value=`+ ${parsed.count}`;meta=parsed.count===1?"Add 1 aftermarket.":`Add ${parsed.count} aftermarkets.`;break;
     case "foil":tab="Foil";value=`${parsed.pounds} lb ${titleCase(parsed.kind)}`;meta="Will be added to the foil tally on confirm.";break;
@@ -448,21 +462,26 @@ function clearResult(){
 /* ================= Log / foil ================= */
 function addLog(rawText,parsed){
   const empty=$log.querySelector(".log-empty");if(empty)empty.remove();
+  const time=fmtTime();
   const row=document.createElement("div");row.className="log-row";
-  const t=document.createElement("div");t.className="log-time";t.textContent=fmtTime();
+  const t=document.createElement("div");t.className="log-time";t.textContent=time;
   const txt=document.createElement("div");txt.className="log-text";
   let out=parsed.type==="part"?parsed.code+(parsed.variants&&parsed.variants.length>1?"  (±O/0)":"")
     :parsed.type==="no"?((parsed.candidates&&parsed.candidates.length>1)?parsed.candidates.join("/"):parsed.code)
     :parsed.type==="nosearch"?`NO# search: "${parsed.term}"`
     :parsed.type==="grade"?titleCase(parsed.grade)
-    :parsed.type==="aftermarket"?`+${parsed.count} Aftermarket`:parsed.type==="foil"?`${parsed.pounds} lb ${parsed.kind}`:"";
+    :parsed.type==="aftermarket"?`+${parsed.count} Aftermarket`
+    :parsed.type==="foil"?`${parsed.pounds} lb ${parsed.kind}`
+    :parsed.type==="skip"?"(no match)":"";
   if(parsed.quantity>1&&parsed.type!=="aftermarket")out+=` ×${parsed.quantity}`;
   txt.textContent=`"${rawText}"  →  ${out}`;
   const tag=document.createElement("div");tag.className="log-tag";
   const map={part:["Part #","tag-part"],no:["No #","tag-no"],nosearch:["No# search","tag-no"],grade:["Grade","tag-grade"],
-    aftermarket:["Aftermkt","tag-after"],foil:["Foil","tag-foil"]};
+    aftermarket:["Aftermkt","tag-after"],foil:["Foil","tag-foil"],skip:["Miss","tag-skip"]};
   const[tagText,tagClass]=map[parsed.type];tag.classList.add(tagClass);tag.textContent=tagText;
   row.append(t,txt,tag);$log.prepend(row);
+  const corrected=correctedString(rawText);
+  sessionLog.push({time,raw:rawText,corrected:(corrected!==rawText.toLowerCase().trim()?corrected:""),out,type:parsed.type});
 }
 function addFoilEntry(entry){foilEntries.push(entry);renderFoilEntries();}
 function renderFoilEntries(){
@@ -476,8 +495,20 @@ function renderFoilEntries(){
     const r=document.createElement("span");r.style.color="var(--muted)";r.textContent=e.time;
     row.append(l,r);$foilList.appendChild(row);}
 }
-$clearLog.addEventListener("click",()=>{$log.innerHTML='<div class="log-empty">Nothing confirmed yet.</div>';});
+$clearLog.addEventListener("click",()=>{$log.innerHTML='<div class="log-empty">Nothing confirmed yet.</div>';sessionLog.length=0;});
 $clearFoils.addEventListener("click",()=>{foilEntries.length=0;renderFoilEntries();});
+function exportLog(){
+  if(!sessionLog.length){alert("Nothing logged yet — confirm a few entries first.");return;}
+  const esc=s=>String(s).replace(/\|/g,"\\|");
+  const header="# Voice Grade — session log\n\n| # | Time | Heard | Auto-corrected | Parsed | Type |\n|---|---|---|---|---|---|\n";
+  const rows=sessionLog.map((e,i)=>`| ${i+1} | ${e.time} | ${esc(e.raw)} | ${esc(e.corrected||"")} | ${esc(e.out)} | ${e.type} |`).join("\n");
+  const md=header+rows+"\n";
+  try{const blob=new Blob([md],{type:"text/markdown"});const url=URL.createObjectURL(blob);
+    const a=document.createElement("a");a.href=url;a.download="voicegrade-log.md";document.body.appendChild(a);a.click();a.remove();
+    setTimeout(()=>URL.revokeObjectURL(url),1000);}catch(_){}
+  try{navigator.clipboard.writeText(md);}catch(_){}
+}
+$exportLog.addEventListener("click",exportLog);
 
 /* ================= Speech synthesis (readback) ================= */
 function speak(text){if(!speakOn||!("speechSynthesis"in window))return;
@@ -496,20 +527,22 @@ $speakToggle.addEventListener("click",()=>{speakOn=!speakOn;
 function preview(){
   const text=$entry.value;
   lastRaw=text.trim();
-  if(!text.trim()){clearResult();$confirmBtn.disabled=true;return;}
+  if(!text.trim()){clearResult();$confirmBtn.disabled=true;$confirmBtn.textContent="✓ Confirm";$confirmBtn.classList.remove("miss");return;}
   const parsed=parsePhrase(text);
   setResult(parsed,{flash:false,raw:text.trim()});
-  $confirmBtn.disabled=(parsed.type==="skip");
+  const isSkip=(parsed.type==="skip");
+  $confirmBtn.disabled=false;
+  $confirmBtn.textContent=isSkip?"⚠ Log Miss":"✓ Confirm";
+  $confirmBtn.classList.toggle("miss",isSkip);
 }
 function confirmEntry(){
   const text=$entry.value.trim();if(!text)return;
   const parsed=parsePhrase(text);
-  if(parsed.type==="skip"){setResult(parsed,{flash:true,raw:text});return;}
   setResult(parsed,{flash:true,raw:text});
   addLog(text,parsed);
   if(parsed.type==="foil")addFoilEntry({pounds:parsed.pounds,kind:parsed.kind,quantity:parsed.quantity||1,time:fmtTime()});
-  const phrase=spokenConfirmation(parsed);if(phrase)speak(phrase);
-  $entry.value="";$confirmBtn.disabled=true;
+  if(parsed.type!=="skip"){const phrase=spokenConfirmation(parsed);if(phrase)speak(phrase);}
+  $entry.value="";$confirmBtn.disabled=true;$confirmBtn.textContent="✓ Confirm";$confirmBtn.classList.remove("miss");
   setTimeout(()=>{clearResult();$entry.focus();},650);
 }
 $entry.addEventListener("input",preview);
