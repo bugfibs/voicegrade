@@ -36,7 +36,9 @@ window.VG_DATA = {
     { from: "granger", to: "ranger" },
     { from: "logo", to: "lobo" },
     { from: "winstar", to: "windstar" },
-    { from: "youtube", to: "airtube" }
+    { from: "youtube", to: "airtube" },
+    { from: "crown vic", to: "cv" },
+    { from: "crown victoria", to: "cv" }
   ],
 
   /* ---- NO# search terms ----
