@@ -192,7 +192,7 @@
   Add <code>quantity 2</code> to the end of any entry to set a count.
 </div>
 
-<script src="data.js"></script>
+<script src="data.js?v=8"></script>
 <script>
 /* ================= Reference data (from data.js, with fallback) ================= */
 const _D=(window.VG_DATA||{});
@@ -331,19 +331,22 @@ function matchGrade(tokens){const joined=tokens.join(" ");
   for(const g of GRADES){if(joined===g)return g;if(joined.startsWith(g+" "))return g;}return null;}
 // Named NO# lookups: a spoken name -> one or more NO# codes.
 const QTY_WORDS=["quantity","qty","times","time","star","asterisk"];
-function matchNoTerm(tokens){
+function matchNoTermExact(tokens){
   const clean=tokens.filter(t=>t!=="__SPACE__");
   if(!clean.length)return null;
   const key=canonStr(clean.join(" "));
   if(!key)return null;
-  // 1. Exact match -> send the catalog's exact spelling.
-  for(const t of noTermIndex){if(t.canon===key)return{term:t.term,exact:true};}
-  // 2. Partial: your words are part of a known term, or contain one -> NO# search of your words.
-  if(key.length>=4&&/[a-z]/.test(key)){
-    for(const t of noTermIndex){
-      if(t.canon.length>=4&&(t.canon.includes(key)||key.includes(t.canon)))
-        return{term:sendableSpoken(clean),exact:false,via:t.term};
-    }
+  for(const t of noTermIndex){if(t.canon===key)return t.term;}
+  return null;
+}
+function matchNoTermPartial(tokens){
+  const clean=tokens.filter(t=>t!=="__SPACE__");
+  if(!clean.length)return null;
+  const key=canonStr(clean.join(" "));
+  if(key.length<4||!/[a-z]/.test(key))return null;
+  for(const t of noTermIndex){
+    if(t.canon.length>=4&&(t.canon.includes(key)||key.includes(t.canon)))
+      return{term:sendableSpoken(clean),via:t.term};
   }
   return null;
 }
@@ -363,14 +366,7 @@ function extractQuantity(tokens){
 }
 function parseBase(tokens){
   if(!tokens.length)return{type:"skip",reason:"empty"};
-  // "no number [term]" / "no [term]" → free-text search of the NO# section
-  if(tokens[0]==="no"){
-    let rest=tokens.slice(1);
-    if(rest[0]==="number")rest=rest.slice(1);
-    const term=rest.filter(t=>t!=="__SPACE__").join(" ").trim();
-    if(term)return{type:"nosearch",term};
-    return{type:"skip",reason:"say a term after 'no number', e.g. 'no number fusion'"};
-  }
+  // Foil first (needs foreign/domestic + a weight)
   const hasKind=tokens.includes("foreign")||tokens.includes("domestic");
   const hasWeight=tokens.some(t=>["pound","pounds","lb","lbs"].includes(t));
   if(tokens.includes(FOIL_TRIGGER)||(hasKind&&hasWeight)){
@@ -386,13 +382,26 @@ function parseBase(tokens){
   if(AFTERMARKET_WORDS.includes(lastTok)){const front=tokens.slice(0,-1);
     if(front.length&&front.every(isNumberToken)){const n=parseInt(parseNumberTokens(front)||"0",10);if(n>0)return{type:"aftermarket",count:n};}}
   const grade=matchGrade(tokens);if(grade)return{type:"grade",grade};
+  // Exact catalog term BEFORE the "no" prefix and brand logic, so "No Code Ranger Pre",
+  // "Ford 500 Pre", the diesel "Ford (DPF)" etc. aren't hijacked by those rules.
+  const exactTerm=matchNoTermExact(tokens);
+  if(exactTerm)return{type:"nosearch",term:exactTerm,known:true};
+  // "no number [term]" / "no [term]" → free-text NO# search
+  if(tokens[0]==="no"){
+    let rest=tokens.slice(1);
+    if(rest[0]==="number")rest=rest.slice(1);
+    const term=rest.filter(t=>t!=="__SPACE__").join(" ").trim();
+    if(term)return{type:"nosearch",term};
+    return{type:"skip",reason:"say a term after 'no number', e.g. 'no number fusion'"};
+  }
+  // Brand + number → NO# code (e.g. "nissan 45" → NIS045). If no number follows, fall through.
   const brand=matchBrand(tokens);
   if(brand){const numTokens=brand.restTokens.filter(t=>t!=="__SPACE__");
     if(numTokens.length&&numTokens.every(isNumberToken)){const digits=parseNumberTokens(numTokens);
-      if(digits)return{type:"no",code:brand.code+digits.padStart(3,"0")};}
-    return{type:"skip",reason:`heard brand '${brand.code}' but no number after it`};}
-  const noTerm=matchNoTerm(tokens);
-  if(noTerm)return{type:"nosearch",term:noTerm.term,known:noTerm.exact,via:noTerm.via};
+      if(digits)return{type:"no",code:brand.code+digits.padStart(3,"0")};}}
+  // Partial catalog term (your words are part of a known term, or contain one)
+  const partial=matchNoTermPartial(tokens);
+  if(partial)return{type:"nosearch",term:partial.term,known:false,via:partial.via};
   if(tokens.every(t=>t==="__SPACE__"||isWordToken(t))){const id=buildIdentifier(tokens).toUpperCase();
     if(id.trim().length)return{type:"part",code:id,variants:aliasVariants(id)};}
   return{type:"skip",reason:"didn't match any known pattern"};

@@ -25,6 +25,20 @@ window.VG_DATA = {
     "high pre","low reg","low pre","mid reg","mid pre","junk pre","pellets"
   ],
 
+  /* ---- Built-in corrections: fix recurring mishears for EVERY device ----
+     "from" is what the speech engine tends to hear; "to" is what you meant.
+     These ship to every device (unlike the in-app Corrections list, which is
+     per-device). Add recurring ones here as we find them.                    */
+  corrections: [
+    { from: "prix", to: "pre" },
+    { from: "greg", to: "reg" },
+    { from: "grainger", to: "ranger" },
+    { from: "granger", to: "ranger" },
+    { from: "logo", to: "lobo" },
+    { from: "winstar", to: "windstar" },
+    { from: "youtube", to: "airtube" }
+  ],
+
   /* ---- NO# search terms ----
      Say one of these and it goes to the No Number tab's search box, spelled
      exactly as written here. Homophones are folded automatically, so "4 dot"
@@ -72,6 +86,10 @@ window.VG_DATA = {
     "Continental", "Spaceship", "Continental Pre", "Cougar Wedge", "Stop Sign",
     "Ford 500", "Ford 500 Pre", "No Code Ford 500 Pre", "Focus/Fusion", "Small Z Pipe",
     "Boomerang",
+    // --- Ford, added from trial feedback (verify spelling against catalog) ---
+    "Lobo", "Mustang", "Mustang Pre", "Mustang Back", "Mustang Front",
+    "Aerostar", "Town Car", "Town Car Pre", "CV", "Crown Victoria",
+    "Airtube Torpedo", "Lightbulb", "Econoline", "Econoline Pre", "Econoline Long",
 
     // ===== CHRYSLER =====
     "Fishtail Jeep", "Straightedge Jeep", "Straightsides Jeep", "Long Jeep",
@@ -135,5 +153,3 @@ window.VG_DATA = {
   ]
 
 };
-
-
