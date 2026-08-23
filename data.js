@@ -162,8 +162,32 @@ window.VG_DATA = {
     "Detroit One Box Combined", "Thin Flanges", "Skinny Purafilter",
     "Thick Flanges", "Fat Purafilter",
 
-    // ===== GM (earlier examples — kept so "4 dot" still works) =====
-    "4 dot", "cheesegrater"
+    // ===== GM =====
+    "Oval GM (Pressed Caps)", "Oval GM", "Large Oval GM", "Large Oval GM (Offset Pipes)",
+    "Crimp Oval GM (Straight Pipes)", "Crimp Oval GM (Angle Pipe)",
+    "Rear Oval GM (With Flange)", "Rear Oval GM", "Rear Oval GM (Offset Pipes)",
+    "Impala Round", "Impala Oval",
+    "Malibu Oval Pre", "Malibu Round", "Malibu Oval",
+    "Saturn Round Pre", "4 Dot Saturn", "6 Dot Saturn", "Saturn DGM", "Saturn DGM (Airtube)",
+    "Saturn Round Pre (Airtube)", "Saturn Brick", "Ion", "Saturn Round",
+    "Vue", "Saturn Round (Crimps)", "Saturn Oval",
+    "HHR Front", "Cobalt Front", "HHR Rear", "Cobalt Rear",
+    "Small Flow", "Large Flow",
+    "Round Bread Loaf", "Round Loaf", "Small Bread Loaf", "Small Loaf",
+    "Bread Loaf With 3in Pipes", "Medium Loaf",
+    "Large Bread Loaf (Small/Small Pipes)", "Large Loaf S/S",
+    "Large Bread Loaf (Big/Small Pipes)", "Large Loaf B/S",
+    "Large Breadloaf (Big/Big Pipes)", "Large Loaf B/B",
+    "No AC DGM (No AC on Shield)", "AC DGM (AC on Shield)", "DGM (Airtube)", "DGM (Wide Body)",
+    "Wide Body Gap", "Xbody (Soft Flange)", "Narrow Body Gap", "Xbody (Hard Flange)",
+    "Square Breadloaf", "Caterra Square",
+    "Small Cheesegrater", "Blazer Round", "4 Dot Cheesegrater", "Tahoe", "Blazer Oval",
+    "5 Dot Cheesegrater", "Mini Flow", "Blazer Round Pre",
+    "Trailblazer Round (1 Cat System)", "Trailblaze Pair (Round)", "Trailblazer Pair (Oval)",
+    "Large Trailblazer",
+    "5.3 Pill (Angle Pipe)", "5.3 Pill (Straight Pipes)", "Pressed Caps", "6.0 Pill (Pressed Caps)",
+    "Large 5.3 Pill", "6.0 Pill",
+    "454 Big Block", "6.0 Square", "Chicklet", "Aveo Square", "Mini Breadloaf", "Canyon Round"
   ]
 
 };
