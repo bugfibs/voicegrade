@@ -192,7 +192,7 @@
   Add <code>quantity 2</code> to the end of any entry to set a count.
 </div>
 
-<script src="data.js?v=9"></script>
+<script src="data.js?v=10"></script>
 <script>
 /* ================= Reference data (from data.js, with fallback) ================= */
 const _D=(window.VG_DATA||{});
@@ -509,11 +509,13 @@ $clearFoils.addEventListener("click",()=>{foilEntries.length=0;renderFoilEntries
 function exportLog(){
   if(!sessionLog.length){alert("Nothing logged yet — confirm a few entries first.");return;}
   const esc=s=>String(s).replace(/\|/g,"\\|");
-  const header="# Voice Grade — session log\n\n| # | Time | Heard | Auto-corrected | Parsed | Type |\n|---|---|---|---|---|---|\n";
+  const now=new Date();const p=n=>String(n).padStart(2,"0");
+  const stamp=`${now.getFullYear()}${p(now.getMonth()+1)}${p(now.getDate())}-${p(now.getHours())}${p(now.getMinutes())}${p(now.getSeconds())}`;
+  const header=`# Voice Grade — session log (${stamp})\n\n> Notes: \n\n| # | Time | Heard | Auto-corrected | Parsed | Type |\n|---|---|---|---|---|---|\n`;
   const rows=sessionLog.map((e,i)=>`| ${i+1} | ${e.time} | ${esc(e.raw)} | ${esc(e.corrected||"")} | ${esc(e.out)} | ${e.type} |`).join("\n");
   const md=header+rows+"\n";
   try{const blob=new Blob([md],{type:"text/markdown"});const url=URL.createObjectURL(blob);
-    const a=document.createElement("a");a.href=url;a.download="voicegrade-log.md";document.body.appendChild(a);a.click();a.remove();
+    const a=document.createElement("a");a.href=url;a.download=`voicegrade-log-${stamp}.md`;document.body.appendChild(a);a.click();a.remove();
     setTimeout(()=>URL.revokeObjectURL(url),1000);}catch(_){}
   try{navigator.clipboard.writeText(md);}catch(_){}
 }

@@ -38,7 +38,16 @@ window.VG_DATA = {
     { from: "winstar", to: "windstar" },
     { from: "youtube", to: "airtube" },
     { from: "crown vic", to: "cv" },
-    { from: "crown victoria", to: "cv" }
+    { from: "crown victoria", to: "cv" },
+    { from: "cramps", to: "crimps" },
+    { from: "lines", to: "line" },
+    { from: "lions", to: "line" },
+    { from: "tea bags", to: "t back" },
+    { from: "tea back", to: "t back" },
+    { from: "tea bag", to: "t back" },
+    { from: "offset center", to: "offset sensor" },
+    { from: "half", to: "1/2" },
+    { from: "4 table", to: "4 tab" }
   ],
 
   /* ---- NO# search terms ----
@@ -116,7 +125,7 @@ window.VG_DATA = {
     "Alfa Romeo 164S",
     "Patriot", "3 Line Shield", "Dart", "Cherokee", "3 Slot",
     "5 Line Shield", "Compass", "200", "5 Slot", "Promaster Pre",
-    "Charger", "Jeep Cherokee", "Old Straightedge", "4 Tab", "Fiat",
+    "Charger", "Jeep Cherokee", "Old Straightedge", "Straightedge", "4 Tab", "Fiat",
 
     // ===== DIESEL =====
     "2018-2021 Ford 3.0L V6",
