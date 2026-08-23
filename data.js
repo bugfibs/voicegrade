@@ -47,7 +47,10 @@ window.VG_DATA = {
     { from: "tea bag", to: "t back" },
     { from: "offset center", to: "offset sensor" },
     { from: "half", to: "1/2" },
-    { from: "4 table", to: "4 tab" }
+    { from: "4 table", to: "4 tab" },
+    { from: "7 inch", to: "7in" },
+    { from: "9 inch", to: "9in" },
+    { from: "11 inch", to: "11in" }
   ],
 
   /* ---- NO# search terms ----
