@@ -60,6 +60,7 @@ sent for partial matches. Quantity: trailing "quantity/qty/times/time/star N".
 `index.html` loads `data.js?v=N`. **Every time you change `data.js`, bump N**
 (e.g. v=13 → v=14) and commit index.html too — otherwise browsers serve a stale
 cached `data.js` and your new terms won't load. Current version: **v=13**.
+When you edit data.js, increment this number BOTH here and in index.html.
 
 ## Workflow loop
 1. Add/adjust terms in `data.js` (bump the `?v=` in index.html).
@@ -70,15 +71,36 @@ cached `data.js` and your new terms won't load. Current version: **v=13**.
    or rules.
 5. Repeat per brand.
 
+## Card-by-card live-fix workflow (preferred day-to-day)
+Instead of batching a whole log, the grader trials one converter card at a time and
+fixes misses on the spot:
+- A **mishear** (engine heard the wrong words, e.g. "2 tab" → "2 table") = add a
+  `correction` `{ from: "2 table", to: "2 tab" }`.
+- A **wrong parse / miss** (routed to part# or matched nothing) = add/adjust a
+  `noTerms` entry, or a rule.
+When the grader says something like *"add a correction: '2 table' should become
+'2 tab'"*, do exactly that in `data.js`, bump the `?v=` in index.html, and commit.
+One fix at a time is fine; keep it fast. (A running `fixes.md` scratch file of
+`heard -> meant` lines may also be handed over to apply in a batch.)
+
+## SCOPE: NO# terms first, part numbers LATER
+Finish and stabilize the NO# search terms across all brands BEFORE touching
+part-number parsing. Part numbers (decimals like "121.5", letter codes, O/0) are a
+separate, later project — do not change part-number behavior while completing NO#
+work unless explicitly asked.
+
 ## Current state (update as you go)
 - **NO# brands DONE:** Ford, Chrysler, Diesel, GM, Nissan.
 - **NO# brands TODO:** Toyota, Mitsubishi, Honda, Mazda, Subaru, Volvo,
   Volkswagen, Mercedes. (Screenshots exist in the trials PDF.)
-- **Not started:** part-number parsing (decimals like "121.5", letter codes) —
-  a separate problem from NO# search.
-- **Known gaps to verify:** Ford FRD056–FRD083 cards were never captured; some
-  Ford trial terms (Mustang Back/Front, Aerostar, Town Car, CV, Econoline) were
-  added with best-guess spelling and need catalog verification. GM GEM059 missing.
+- **GM notes handled:** DGM (say "dgm" or "double gm"), Caterra, 5.3 Pill all fixed;
+  "4 Dot" added. Inch sizes collapse ("4 inch"/"four inch" → "4in") in digit and
+  word form.
+- **Still open:** confirm exact heard-text for GM "saturn round pre" and "4 dot"
+  mishears (grader to provide). Ford FRD056–FRD083 never captured; some Ford trial
+  terms (Mustang Back/Front, Aerostar, Town Car, CV, Econoline) are best-guess
+  spellings to verify. GM GEM059 missing.
+- **Not started (LATER):** part-number parsing.
 
 ## The endgame (not built yet)
 Connect confirmed output into the real RCS site (a login website, no public API):
