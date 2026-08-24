@@ -50,7 +50,25 @@ window.VG_DATA = {
     { from: "4 table", to: "4 tab" },
     { from: "7 inch", to: "7in" },
     { from: "9 inch", to: "9in" },
-    { from: "11 inch", to: "11in" }
+    { from: "11 inch", to: "11in" },
+    { from: "2 inch", to: "2in" },
+    { from: "3 inch", to: "3in" },
+    { from: "4 inch", to: "4in" },
+    { from: "5 inch", to: "5in" },
+    { from: "6 inch", to: "6in" },
+    { from: "8 inch", to: "8in" },
+    { from: "double gm", to: "dgm" },
+    { from: "catera", to: "caterra" },
+    { from: "point", to: "" },
+    { from: "two inch", to: "2in" },
+    { from: "three inch", to: "3in" },
+    { from: "four inch", to: "4in" },
+    { from: "five inch", to: "5in" },
+    { from: "six inch", to: "6in" },
+    { from: "seven inch", to: "7in" },
+    { from: "eight inch", to: "8in" },
+    { from: "nine inch", to: "9in" },
+    { from: "eleven inch", to: "11in" }
   ],
 
   /* ---- NO# search terms ----
@@ -187,7 +205,21 @@ window.VG_DATA = {
     "Large Trailblazer",
     "5.3 Pill (Angle Pipe)", "5.3 Pill (Straight Pipes)", "Pressed Caps", "6.0 Pill (Pressed Caps)",
     "Large 5.3 Pill", "6.0 Pill",
-    "454 Big Block", "6.0 Square", "Chicklet", "Aveo Square", "Mini Breadloaf", "Canyon Round"
+    "454 Big Block", "6.0 Square", "Chicklet", "Aveo Square", "Mini Breadloaf", "Canyon Round",
+    "DGM", "Caterra", "5.3 Pill", "4 Dot",
+
+    // ===== NISSAN =====
+    "2in Puck", "4in Puck", "4in Puck (Half Shield)", "4in Puck (Soft Flange)", "6in Puck",
+    "7in Puck (1/2)", "7in Puck", "2 Tab", "Tycoon", "8 Bolt", "Pathfinder", "Titan",
+    "Vacuum (1/2)", "Vacuum", "Hex and Square Material", "Hex Vacuum",
+    "Bolt Holes Close Together", "Cast", "Bolt Holes On Sides", "Swoop Neck", "Right Angle",
+    "Cast Twin", "Xterra", "Xterra (1/2)", "Twin", "Sentra", "Quest", "Fat Man",
+    "Altima", "Murano", "Juke", "Q50", "Frontier", "Versa", "4 Line Shield", "Back Hanger",
+    "350Z", "Infinity", "Elbow (Plain Shield/No Shield)", "Elbow (Shield Holes)",
+    "GTR Rear (1/2)", "GTR Rear", "GTR Front",
+    "Old Squid (Skinny Neck)", "Old Squid (Wide Neck)", "Squid (Loose Material)", "2 Sensors",
+    "Long Flange", "Squid (Tight Material)", "Short Flange", "Squid (Hex Material)",
+    "1 Dot Pre", "4 Rows of Dots", "4 Line Body", "Twinturbo 300ZX", "300ZX", "5 Line Body", "New Puck"
   ]
 
 };
